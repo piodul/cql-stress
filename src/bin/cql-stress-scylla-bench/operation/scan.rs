@@ -121,12 +121,12 @@ impl ScanOperation {
         first: i64,
         last: i64,
     ) -> Result<ControlFlow<()>> {
-        let iter = self
+        let pager = self
             .session
             .execute_iter(self.statement.clone(), (first, last))
             .await?;
 
-        let mut iter = iter.into_typed::<(i64, i64, Vec<u8>)>();
+        let mut iter = pager.rows_stream::<(i64, i64, Vec<u8>)>()?;
 
         while let Some((pk, ck, v)) = iter.try_next().await? {
             rctx.row_read();

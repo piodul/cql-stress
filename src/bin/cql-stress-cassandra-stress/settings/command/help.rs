@@ -36,7 +36,7 @@ pub fn parse_help_command(payload: &mut ParsePayload) -> Result<()> {
     };
 
     anyhow::ensure!(
-        !remaining_help_params.is_some_and(|remaining| !remaining.is_empty())
+        remaining_help_params.is_none_or(|remaining| remaining.is_empty())
             && remaining_payload.next().is_none(),
         "Invalid command/option provided to help"
     );

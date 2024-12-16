@@ -6,6 +6,7 @@ mod row_generator;
 mod user;
 mod write;
 
+use anyhow::Context;
 use anyhow::Result;
 use cql_stress::configuration::Operation;
 use cql_stress::configuration::OperationContext;
@@ -243,25 +244,16 @@ fn recompute_seed(seed: i64, partition_key: &CqlValue) -> i64 {
     }
 }
 
-fn extract_first_row_from_query_result(query_result: &QueryResult) -> Result<&Row> {
-    let rows = match &query_result.rows {
-        Some(rows) => rows,
-        None => anyhow::bail!("Query result doesn't contain any rows.",),
-    };
+fn extract_single_row_from_query_result(query_result: QueryResult) -> Result<Row> {
+    let rows_result = query_result
+        .into_rows_result()
+        .context("Failed to convert to Rows result")?;
 
-    match rows.split_first() {
-        Some((first_row, remaining_rows)) => {
-            // Note that row-generation logic behaves in a way that given partition_key,
-            // there is exactly one row with this partition_key.
-            anyhow::ensure!(
-                remaining_rows.is_empty(),
-                "Multiple rows matched the key. Rows: {:?}",
-                rows
-            );
-            Ok(first_row)
-        }
-        None => anyhow::bail!("Query result doesn't contain any rows.",),
-    }
+    // Note that row-generation logic behaves in a way that given partition_key,
+    // there is exactly one row with this partition_key.
+    rows_result
+        .single_row::<Row>()
+        .context("Failed to extract a single row from the result")
 }
 
 pub trait RowValidator: Sync + Send + Default {
@@ -272,7 +264,7 @@ pub trait RowValidator: Sync + Send + Default {
 pub struct EqualRowValidator;
 impl RowValidator for EqualRowValidator {
     fn validate_row(&self, generated_row: &[CqlValue], query_result: QueryResult) -> Result<()> {
-        let first_row = extract_first_row_from_query_result(&query_result)?;
+        let first_row = extract_single_row_from_query_result(query_result)?;
 
         anyhow::ensure!(
             first_row.columns.len() == generated_row.len(),
@@ -310,7 +302,7 @@ impl RowValidator for ExistsRowValidator {
     fn validate_row(&self, _generated_row: &[CqlValue], query_result: QueryResult) -> Result<()> {
         // We only check that the row with given PK exists, which is equivalent to
         // successfully extracting the first row from the query result.
-        let _first_row = extract_first_row_from_query_result(&query_result)?;
+        let _first_row = extract_single_row_from_query_result(query_result)?;
         Ok(())
     }
 }
