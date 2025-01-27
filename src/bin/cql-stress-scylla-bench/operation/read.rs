@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::{stream, StreamExt, TryStreamExt};
-use scylla::cql_to_rust::FromRow;
 use scylla::frame::value::Counter;
 use scylla::{prepared_statement::PreparedStatement, Session};
 
@@ -188,24 +187,27 @@ impl ReadOperation {
         stmt: PreparedStatement,
         values: Vec<i64>,
     ) -> Result<ControlFlow<()>> {
-        let mut iter = self.session.execute_iter(stmt, values).await?;
+        let pager = self.session.execute_iter(stmt, values).await?;
 
-        while let Some(row) = iter.try_next().await? {
-            rctx.row_read();
-            match self.read_kind {
-                ReadKind::Regular => {
-                    let (ck, v) = <(i64, Vec<u8>) as FromRow>::from_row(row)?;
+        match self.read_kind {
+            ReadKind::Regular => {
+                let mut iter = pager.rows_stream::<(i64, Vec<u8>)>()?;
+
+                while let Some((ck, v)) = iter.try_next().await? {
+                    rctx.row_read();
                     if self.validate_data {
                         if let Err(err) = super::validate_row_data(pk, ck, &v) {
                             rctx.data_corruption(pk, ck, &err);
                         }
                     }
                 }
-                ReadKind::Counter => {
-                    let (ck, c1, c2, c3, c4, c5) =
-                        <(i64, Counter, Counter, Counter, Counter, Counter) as FromRow>::from_row(
-                            row,
-                        )?;
+            }
+            ReadKind::Counter => {
+                let mut iter =
+                    pager.rows_stream::<(i64, Counter, Counter, Counter, Counter, Counter)>()?;
+
+                while let Some((ck, c1, c2, c3, c4, c5)) = iter.try_next().await? {
+                    rctx.row_read();
                     if self.validate_data {
                         if let Err(err) =
                             super::validate_counter_row_data(pk, ck, c1.0, c2.0, c3.0, c4.0, c5.0)

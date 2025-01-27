@@ -302,7 +302,7 @@ impl OperationFactory for UserOperationFactory {
                     let argument_index = variable_metadata
                         .iter()
                         .map(|col_spec| {
-                            workload.row_index_of_column_with_name(&col_spec.name).expect(
+                            workload.row_index_of_column_with_name(col_spec.name()).expect(
                             "Prepared statement metadata is inconsistent with cluster metadata.",
                         )
                         })

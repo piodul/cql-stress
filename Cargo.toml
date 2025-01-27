@@ -20,7 +20,7 @@ rand = "0.8"
 rand_distr = "0.4"
 rand_pcg = "0.3"
 regex = "1.9.1"
-scylla = { version = "0.14.0", features = ["ssl"] }
+scylla = { version = "0.15.1", features = ["ssl"] }
 sha2 = "0.10"
 strum = "0.25.0"
 strum_macros = "0.25.1"
@@ -47,7 +47,7 @@ user-profile = ["dep:serde", "dep:serde_yaml", "dep:uuid"]
 ntest = "0.8"
 num-bigint = "0.4"
 bigdecimal = "0.4"
-scylla = { version = "0.14.0", features = [
+scylla = { version = "0.15.1", features = [
     "ssl",
     "num-bigint-04",
     "bigdecimal-04",
