@@ -43,7 +43,8 @@ pub(crate) struct ScyllaBenchArgs {
     pub password: String,
     pub mode: Mode,
     pub latency_type: LatencyType,
-    pub max_retries_per_op: u64,
+    pub max_consecutive_errors_per_op: u64,
+    pub max_errors_in_total: u64,
     pub concurrency: u64,
     pub maximum_rate: u64,
 
@@ -180,9 +181,15 @@ where
     let max_errors_at_row = flag.u64_var(
         "error-at-row-limit",
         0,
-        "the maximum number of attempts allowed for a single operation. \
+        "the maximum number of consecutive errors allowed. \
         After exceeding it, the workflow will terminate with an error. \
-        Set to 0 if you want to have unlimited retries",
+        Set to 0 if you want to disable this limit",
+    );
+    let max_errors = flag.u64_var(
+        "error-limit",
+        0,
+        "the number of total errors after which the workflow should stop and fail; \
+        set it to 0 (the default) to disable this limit",
     );
     let concurrency = flag.u64_var("concurrency", 16, "number of used tasks");
     let maximum_rate = flag.u64_var(
@@ -338,7 +345,10 @@ where
         // Zero means unlimited tries,
         // and #tries == #retries + 1,
         // therefore just subtract with wraparound and treat u64::MAX as infinity
-        let max_retries_per_op = max_errors_at_row.get().wrapping_sub(1);
+        let max_consecutive_errors_per_op = max_errors_at_row.get().wrapping_sub(1);
+
+        // Similar to above
+        let max_errors_in_total = max_errors.get().wrapping_sub(1);
 
         let hdr_latency_resolution = match hdr_latency_units.get().as_str() {
             "ns" => 1,
@@ -385,7 +395,8 @@ where
             mode,
             concurrency,
             latency_type,
-            max_retries_per_op,
+            max_consecutive_errors_per_op,
+            max_errors_in_total,
             maximum_rate,
             test_duration: test_duration.get(),
             partition_count,
@@ -427,6 +438,22 @@ impl ScyllaBenchArgs {
         println!("Mode:\t\t\t {}", show_mode(&self.mode));
         println!("Workload:\t\t {}", show_workload(&self.workload));
         println!("Timeout:\t\t {}", format_duration(self.timeout));
+        if self.max_consecutive_errors_per_op == u64::MAX {
+            println!("Max error number at row: unlimited");
+        } else {
+            println!(
+                "Max error number at row: {}",
+                self.max_consecutive_errors_per_op as u128 + 1,
+            );
+        }
+        if self.max_errors_in_total == u64::MAX {
+            println!("Max error number:\t unlimited");
+        } else {
+            println!(
+                "Max error number:\t {}",
+                self.max_errors_in_total as u128 + 1,
+            );
+        }
         println!(
             "Consistency level:\t {}",
             show_consistency_level(&self.consistency_level)

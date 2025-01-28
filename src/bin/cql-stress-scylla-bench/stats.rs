@@ -252,7 +252,12 @@ impl StatsPrinter {
         Ok(())
     }
 
-    pub fn print_final(&self, stats: &Stats, out: &mut impl Write) -> Result<()> {
+    pub fn print_final(
+        &self,
+        stats: &Stats,
+        errors: &[anyhow::Error],
+        out: &mut impl Write,
+    ) -> Result<()> {
         let time = Instant::now() - self.start_time;
         writeln!(out)?;
         writeln!(out, "Results:")?;
@@ -274,7 +279,16 @@ impl StatsPrinter {
             self.print_final_latency_histogram("c-o fixed latency", &ls.co_fixed, out)?;
         }
 
-        // TODO: "critical errors"
+        if !errors.is_empty() {
+            writeln!(
+                out,
+                "\nFollowing critical errors were caught during the run:"
+            )?;
+            for err in errors {
+                // The {:#} syntax makes sure that the error is printed in one line
+                writeln!(out, "    {:#}", err)?;
+            }
+        }
 
         Ok(())
     }

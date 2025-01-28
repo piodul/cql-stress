@@ -98,13 +98,19 @@ async fn main() -> Result<()> {
                 combined_stats.combine(&partial_stats);
             }
             result = &mut run_finished => {
+                let errors = match &result {
+                    Ok(_) => &[],
+                    Err(err) => err.errors.as_slice(),
+                };
+                // Combine stats for the last time
+                let partial_stats = sharded_stats.get_combined_and_clear();
+                combined_stats.combine(&partial_stats);
+                printer.print_final(&combined_stats, errors, &mut std::io::stdout())?;
                 if result.is_ok() {
-                    // Combine stats for the last time
-                    let partial_stats = sharded_stats.get_combined_and_clear();
-                    combined_stats.combine(&partial_stats);
-                    printer.print_final(&combined_stats, &mut std::io::stdout())?;
+                    return Ok(());
+                } else {
+                    return Err(anyhow::anyhow!("Benchmark failed"));
                 }
-                return result.context("An error occurred during the benchmark");
             }
         }
     }
@@ -155,7 +161,8 @@ async fn prepare(args: Arc<ScyllaBenchArgs>, stats: Arc<ShardedStats>) -> Result
         concurrency: args.concurrency,
         rate_limit_per_second,
         operation_factory,
-        max_retries_per_op: args.max_retries_per_op as usize,
+        max_consecutive_errors_per_op: args.max_consecutive_errors_per_op,
+        max_errors_in_total: args.max_errors_in_total,
     })
 }
 
