@@ -8,6 +8,7 @@ pub mod configuration;
 pub mod distribution;
 pub mod run;
 pub mod sharded_stats;
+pub mod version;
 
 #[cfg(test)]
 mod tests {
