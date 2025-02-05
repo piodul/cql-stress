@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use anyhow::{Context, Result};
+use cql_stress::version;
 use scylla::load_balancing::{DefaultPolicy, LoadBalancingPolicy};
 use scylla::statement::Consistency;
 
@@ -276,10 +277,17 @@ where
         "write meaningful data and validate while reading",
     );
 
+    let version_flag = flag.bool_var("version", false, "Show version");
+
     let (parser, desc) = flag.build();
 
     let result = move || -> Result<ScyllaBenchArgs> {
         parser.parse_args(args)?;
+
+        if version_flag.get() {
+            println!("{}", version::format_version_info());
+            std::process::exit(0);
+        }
 
         let nodes = nodes.get().split(',').map(str::to_string).collect();
         let mode = parse_mode(&mode.get())?;

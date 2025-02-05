@@ -9,7 +9,7 @@ from collections import namedtuple
 # scylla-tools-java is based on 3.* version of Apache Cassandra.
 # Notice that Apache c-s changed generation logic in version 4.0.0.
 # See: https://github.com/apache/cassandra/commit/f1f5f194620d3f9e11492f0051b6b71018033413
-DEFAULT_CASSANDRA_VERSION = "3.11.17"
+DEFAULT_CASSANDRA_VERSION = "3.11.18"
 ROOT_DIRECTORY = dirname(dirname(dirname(__file__)))
 DOWNLOAD_DIRECTORY_NAME = os.path.join(ROOT_DIRECTORY, "cassandra-download")
 
@@ -96,7 +96,7 @@ class CassandraStress(CSCliRunner):
             # Fetch cassandra.
             print(
                 f"Fetching cassandra {cassandra_version} to {DOWNLOAD_DIRECTORY_NAME}")
-            # https://dlcdn.apache.org/cassandra/3.11.17/apache-cassandra-3.11.17-bin.tar.gz
+            # https://dlcdn.apache.org/cassandra/3.11.18/apache-cassandra-3.11.18-bin.tar.gz
             cassandra_url = f"https://dlcdn.apache.org/cassandra/{cassandra_version}/{cassandra_tar}"
             subprocess.run(args=["wget", "-P", DOWNLOAD_DIRECTORY_NAME,
                            "-N", "--no-verbose", cassandra_url], check=True)
